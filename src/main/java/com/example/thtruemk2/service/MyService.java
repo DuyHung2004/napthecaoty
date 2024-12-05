@@ -44,7 +44,7 @@ public class MyService {
     public String requestVerificationToken;
     private final List<String[]> proxyList = new ArrayList<>();
     AtomicInteger proxyIndex = new AtomicInteger(0);
-    private final AtomicInteger requestCount = new AtomicInteger(0);
+    AtomicInteger currentProxyIndex = new AtomicInteger(0);
     private static final int REQUEST_LIMIT = 100;
     @Autowired
     public MyService(WebClient.Builder webClientBuilder) {
@@ -76,15 +76,15 @@ public class MyService {
         }
     }
     private void configureWebClient() {
-        String[] currentProxy = proxyList.get(proxyIndex.get());
+        String[] currentProxy = proxyList.get(currentProxyIndex.get());
         HttpClient httpClient = HttpClient.create()
-                .secure(sslContextSpec -> {
-                    try {
-                        sslContextSpec.sslContext(SslContextBuilder.forClient().build()); // Dùng cấu hình SSL mặc định
-                    } catch (SSLException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
+//                .secure(sslContextSpec -> {
+//                    try {
+//                        sslContextSpec.sslContext(SslContextBuilder.forClient().build()); // Dùng cấu hình SSL mặc định
+//                    } catch (SSLException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                })
                 .proxy(proxy -> proxy.type(ProxyProvider.Proxy.HTTP)
                         .address(new InetSocketAddress(currentProxy[0], Integer.parseInt(currentProxy[1])))
                         .username(currentProxy[2])
@@ -95,15 +95,13 @@ public class MyService {
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
     }
-    public void switchProxyIfNeeded(int i) {
-        // Đảm bảo rằng chỉ số i nằm trong giới hạn hợp lệ
-        if (i >= 0 && i < proxyList.size()) {
-            proxyIndex.set(i); // Cập nhật proxyIndex thành giá trị i
-            configureWebClient(); // Cấu hình lại WebClient với proxy mới
-            log.info("Đã chuyển sang proxy thứ {}: {}:{}", i, proxyList.get(i)[0], proxyList.get(i)[1]);
+    public void switchProxyIfNeeded() {
+        if (currentProxyIndex.get() < proxyList.size() - 1) {
+            currentProxyIndex.incrementAndGet();
         } else {
-            log.warn("Chỉ số proxy không hợp lệ: {}. Không thay đổi proxy.", i);
+            currentProxyIndex.set(0); // Quay lại proxy đầu tiên
         }
+        configureWebClient();
     }
 
     public String sendPostRequest(threquest requestObject) throws InterruptedException, IOException {
@@ -158,7 +156,6 @@ public class MyService {
         catch (Exception e) {
             // Bắt các ngoại lệ khác
             log.error("An unexpected error occurred: ", e);
-            return "An unexpected error occurred.";
         }
 
         return "";

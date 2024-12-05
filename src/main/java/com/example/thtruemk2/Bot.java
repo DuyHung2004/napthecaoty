@@ -64,7 +64,7 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
-    private void handleMessage(Message message) throws InterruptedException {
+    private void handleMessage(Message message) throws InterruptedException, IOException {
         String text = message.getText();
         if (waitingForCCCD) {
             cccdtest = text;
@@ -104,115 +104,105 @@ public class Bot extends TelegramLongPollingBot {
     public String getBotToken() {
         return "7824163715:AAFSWotEAHjge3rqRb1KnSSs8VZWdS561EY";
     }
-    public void naptien(Message message, String input) throws InterruptedException {
-            String[] mangsdt = tachsdt(input);
-            boolean stopAll = false;
-        AtomicBoolean stopThreads = new AtomicBoolean(false);
-            for (int i=0;i<mangsdt.length;i++) {
-                stopThreads.set(false);
-                if (stopAll) break;
-                String sdt = mangsdt[i];
-                for (int j = 0; j < 5; j++) {
-                    int finalI = j;
-                    executorService.submit(() -> {
-                        int dem2=0;
-                        int dem=0;
-                        boolean check = true;
-                        int n=0;
-                        int m=0;
-                        int dem3=0;
-                while (check && !stopThreads.get()) {
-                    if(dem2>=120){
-                        try {
-                            Thread.sleep(120000);
-                            dem2=0;
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                    String macode = generateRandomString();
-                    n++;
-                    dem3++;
-                    threquest request;
-                            if(dem3>=8){
-                                request = new threquest("name", "TY4EKYDWC", sdt);
-                                dem3=0;
-                            } else{
-                                request = new threquest("name",macode , sdt);
+    public void naptien(Message message, String input) throws InterruptedException, IOException {
+        String[] mangsdt = tachsdt(input);
+        boolean stopAll = false;
+        for (int i=tmp;i<mangsdt.length;i++) {
+            if (stopAll) break;
+            String sdt = mangsdt[i];
+            boolean check = true;
+            int n=0;
+            int m=0;
+            while (check) {
+                if (waitingForCCCD) {
+                    sendTextMessage(message.getChatId(), "Vui lòng nhập CCCD để tiếp tục.");
+                    return;
+                }
+                String macode = getCodeFromFile();
+                n++;
+                if (macode == null || macode.isEmpty()) {
+                    sendTextMessage(message.getChatId(),"Đã hết mã, hãy nhắc nhở Hưng đẹp zai thêm code vào file");
+                    check = false;
+                    continue;
+                }
+
+                String name = generateRandomName();
+                threquest request = new threquest(name, macode, sdt);
+                try {
+                    String code = myService.sendPostRequest(request);
+                    switch (code) {
+                        case "4":
+                            sendTextMessage(message.getChatId(),"Đã nạp 10k vào số:"+sdt);
+                            if(message.getChatId()!=6205000032L) {
+                                sendTextMessage(6205000032L, message.getChat().getFirstName() + "Đã nạp 10k vào số:"+sdt);
                             }
-                    try {
-                        myService.switchProxyIfNeeded(5*dem+finalI);
-                        String code = myService.sendPostRequest(request);
-                        dem2++;
-                        switch (code) {
-                            case "4":
-                                sendTextMessage(message.getChatId(),"Đã nạp 10k vào số:"+sdt+" voi ma:"+macode);
-                                if(message.getChatId()!=6205000032L) {
-                                    sendTextMessage(6205000032L, message.getChat().getFirstName() + "Đã nạp 10k vào số:"+sdt);
-                                }
-                                m++;
-                                n=0;
-                                tmp=0;
-                                stopThreads.set(true);
-                                if(m>=1) {
-                                    check = false;
-                                }
-                                break;
-                            case "3":
-                                sendTextMessage(message.getChatId(),"Đã nạp 20k vào số:"+sdt);
-                                if(message.getChatId()!=6205000032L) {
-                                    sendTextMessage(6205000032L, message.getChat().getFirstName() + "Đã nạp 20k vào số:"+sdt+" voi ma:"+macode);
-                                }
-                                m++;
-                                n=0;
-                                tmp=0;
-                                stopThreads.set(true);
-                                if(m>=1) {
-                                    check = false;
-                                }
-                                break;
-                            case "null":
-                                tmp=0;
-                                break;
-                            case "1":
-                                sendTextMessage(message.getChatId(),sdt+"Da trung Laptop voi ma:"+macode);
-                                if(message.getChatId()!=6205000032L) {
-                                    sendTextMessage(6205000032L, message.getChat().getFirstName() + sdt+"Da trung LAPTOP voi ma:"+macode);
-                                }
-                                saveCodeToFile(macode, "luucode3.txt");
+                            m++;
+                            n=0;
+                            waitingForCCCD=false;
+                            tmp=0;
+                            if(m>=1) {
                                 check = false;
-                                break;
-                            case "2":
-                                sendTextMessage(message.getChatId(),sdt+"Da trung xe dap voi ma:"+macode);
-                                if(message.getChatId()!=6205000032L) {
-                                    sendTextMessage(6205000032L, message.getChat().getFirstName() + sdt+"Da trung XE DAP voi ma:"+macode);
-                                }
-                                saveCodeToFile(macode, "luucode3.txt");
+                            }
+                            break;case "3":
+                            sendTextMessage(message.getChatId(),"Đã nạp 20k vào số:"+sdt);
+                            if(message.getChatId()!=6205000032L) {
+                                sendTextMessage(6205000032L, message.getChat().getFirstName() + "Đã nạp 20k vào số:"+sdt);
+                            }
+                            m++;
+                            n=0;
+                            waitingForCCCD=false;
+                            tmp=0;
+                            if(m>=1) {
                                 check = false;
-                                break;
-                            default:
-                               // myService.switchProxyIfNeeded();
-                                break;
-                        }
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
+                            }
+                            break;
+                        case "null":
+                            waitingForCCCD=false;
+                            tmp=0;
+                            if(n>=15){
+                                sendTextMessage(message.getChatId(),sdt+" Đã nạp 15 lần KHÔNG THÀNH CÔNG");
+                                if(message.getChatId()!=6205000032L) {
+                                    sendTextMessage(6205000032L, message.getChat().getFirstName() + " Da nap KHÔNG THÀNH CÔNG cho so:" + sdt + " qua 15 lan");
+                                }
+                                check = false;
+                            }
+                            break;
+                        case "1":
+                            sendTextMessage(message.getChatId(),sdt+"Da trung Laptop voi ma:"+macode+"voi ten:"+name);
+                            if(message.getChatId()!=6205000032L) {
+                                sendTextMessage(6205000032L, message.getChat().getFirstName() + sdt+"Da trung LAPTOP voi ma:"+macode+"voi ten:"+name);
+                            }
+                            saveCodeToFile(macode, "luucode3.txt");
+                            tmp=i;
+                            waitingForCCCD = false;
+                            check = false;
+                            break;
+                        case "2":
+                            sendTextMessage(message.getChatId(),sdt+"Da trung xe dap voi ma:"+macode+"voi ten:"+name);
+                            if(message.getChatId()!=6205000032L) {
+                                sendTextMessage(6205000032L, message.getChat().getFirstName() + sdt+"Da trung XE DAP voi ma:"+macode+"voi ten:"+name);
+                            }
+                            saveCodeToFile(macode, "luucode3.txt");
+                            tmp=i;
+                            waitingForCCCD = false;
+                            check = false;
+                            break;
+                        default:
+                            log.info(code);
+                            sendTextMessage(message.getChatId(),"loi khong xac dinh");
+                            check = false;
+                            myService.switchProxyIfNeeded();
+                            waitingForCCCD = false;
+                            break;
                     }
-                    dem++;
-                    if(dem>=39){
-                        dem=0;
-                    }
-                    Random random= new Random();
-                    int x= random.nextInt(50)+50;
-                    try {
-                        Thread.sleep(x);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                } });;}
-                Thread.sleep(60000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                Random random= new Random();
+                int x= random.nextInt(2000)+2000;
+                Thread.sleep(x);
             }
+        }
     }
 //    public String naptien2(String randomPhone){
 //        ExecutorService executorService = Executors.newFixedThreadPool(5);
@@ -346,7 +336,7 @@ public class Bot extends TelegramLongPollingBot {
 
 
     public static String generateRandomName() {
-        String[] names = {"Hùng", "Vũ", "Khanh","ha","thuy","lam","linh","huyen","duong"};
+        String[] names = {"Hùng", "Khanh","ha","thuy","lam","linh","huyen","duong"};
         Random random = new Random();
         return names[random.nextInt(names.length)];
     }
