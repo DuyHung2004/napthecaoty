@@ -27,6 +27,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -60,11 +61,36 @@ public class MyService {
         Element tokenInput = document.selectFirst("input[name=__RequestVerificationToken]");
         requestVerificationToken = tokenInput.attr("value");
     }
-    @PostConstruct
-    private void init() {
-        loadProxies("fileproxy.txt");
-        configureWebClient();
+//    @PostConstruct
+//    private void init() {
+//        loadProxies("fileproxy.txt");
+//        configureWebClient();
+//    }
+    public void configureWebClient2(String proxy) {
+        try {
+            // Tách proxy thành các phần: host, port, username, password
+            String[] parts = proxy.split(":");
+            String host = parts[0];
+            int port = Integer.parseInt(parts[1]);
+
+            // Cấu hình HttpClient với proxy
+            HttpClient httpClient = HttpClient.create()
+                    .proxy(proxyOptions -> proxyOptions.type(ProxyProvider.Proxy.HTTP)
+                            .address(new InetSocketAddress(host, port))
+                    );
+
+            // Tạo WebClient với HttpClient đã cấu hình
+            webClient = WebClient.builder()
+                    .baseUrl("https://quatangtopkid.thmilk.vn")
+                    .clientConnector(new ReactorClientHttpConnector(httpClient))
+                    .build();
+
+            log.info("WebClient đã được cấu hình với proxy: {}", proxy);
+        } catch (Exception e) {
+            log.error("Lỗi khi cấu hình proxy: {}", e.getMessage(), e);
+        }
     }
+
     private void loadProxies(String filename) {
         try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
             String line;
@@ -130,6 +156,7 @@ public class MyService {
                     .bodyValue(value)
                     .retrieve()
                     .bodyToMono(JsonNode.class)
+                    .timeout(Duration.ofSeconds(10))
                     .map(jsonNode -> {
                         JsonNode Type = jsonNode.get("Prize");
                         return (Type != null) ? Type.asText() : "";
